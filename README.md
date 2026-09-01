@@ -1,9 +1,13 @@
-# homebridge-lutron-radiora3
+# @epthewizard/homebridge-lutron-radiora3
 
 Homebridge plugin for **Lutron RadioRA 3** processors (LEAP protocol). Confirmed working
 against firmware `26.05.26f000`. The platform explicitly checks `DeviceType ===
 'RadioRa3Processor'` and `ProductType === 'Lutron RadioRA 3 Project'` on startup and refuses
 to run against anything else (RA2, Caseta) — this is not a generic Lutron plugin.
+
+Published on npm as `homebridge-lutron-radiora3` (unscoped) by cyaneous — this fork is
+deliberately scoped as `@epthewizard/homebridge-lutron-radiora3` so it can never be confused
+with, or silently overwritten by, that package via `npm install`/Homebridge UI's "Update" button.
 
 Supports:
 * Sunnata Keypads / Sunnata Hybrid Keypads → HomeKit Stateless Programmable Switches (single/double/long press per button)
@@ -39,14 +43,18 @@ npm install --ignore-scripts
 npm run build      # rimraf dist && tsc
 npm run lint        # eslint
 
-npm link             # registers this checkout as the global `homebridge-lutron-radiora3` package
+npm link             # registers this checkout as the global `@epthewizard/homebridge-lutron-radiora3` package
 ```
 
 Then, inside your Homebridge install directory (wherever its own `package.json`/`node_modules` live):
 
 ```bash
-npm link homebridge-lutron-radiora3
+npm link @epthewizard/homebridge-lutron-radiora3
 ```
+
+> If you previously had cyaneous's `homebridge-lutron-radiora3` (unscoped) installed, remove it
+> first (`npm uninstall homebridge-lutron-radiora3` in the Homebridge dir) — otherwise you'll
+> have both plugins loaded and registering the same devices.
 
 Restart Homebridge. Useful while iterating:
 
@@ -90,14 +98,14 @@ across restarts since it's a symlink in the global `node_modules`.
 git clone git@github.com:epthewizard/homebridge-lutron-radiora3.git
 cd homebridge-lutron-radiora3 && npm install --ignore-scripts && npm run build && npm link
 # then, in the Homebridge install dir on the Pi:
-npm link homebridge-lutron-radiora3
+npm link @epthewizard/homebridge-lutron-radiora3
 
 # Option B: build on dev machine, ship a tarball
 npm run build
-npm pack                       # produces homebridge-lutron-radiora3-<version>.tgz
-scp homebridge-lutron-radiora3-*.tgz pi@homebridge:/tmp/
+npm pack                       # produces epthewizard-homebridge-lutron-radiora3-<version>.tgz
+scp epthewizard-homebridge-lutron-radiora3-*.tgz pi@homebridge:/tmp/
 # on the Pi, inside the Homebridge install dir:
-npm install /tmp/homebridge-lutron-radiora3-*.tgz
+npm install /tmp/epthewizard-homebridge-lutron-radiora3-*.tgz
 ```
 
 Redeploying after a change: pull, rebuild, restart Homebridge. There's no hot reload outside
@@ -115,6 +123,12 @@ Redeploying after a change: pull, rebuild, restart Homebridge. There's no hot re
   LEAP calls, since firmware behavior here isn't fully documented by Lutron.
 - `npm install` (without `--ignore-scripts`) may fail building `node-pty` on newer toolchains —
   see Dev setup above.
+- **Migrating from the unscoped `homebridge-lutron-radiora3`**: accessories are registered under
+  the npm package name, so switching to the `@epthewizard/...` scope orphans any accessories
+  cached under the old name. Uninstall the old plugin, clear
+  `~/.homebridge/accessories/cachedAccessories`, and let this plugin rediscover everything on
+  next Homebridge start. Your `config.json` `"platform": "LutronRadioRA3"` entry (including
+  `secrets`) doesn't need to change — only the plugin/package name changed, not the platform name.
 
 ## License
 

@@ -3,6 +3,17 @@
 Fork of cyaneous/homebridge-lutron-radiora3, forked to epthewizard/homebridge-lutron-radiora3.
 Homebridge plugin talking to Lutron RadioRA 3 processors over LEAP (`src/leap/`).
 
+## Package renamed to avoid npm-registry collision
+npm's `homebridge-lutron-radiora3` (unscoped) is cyaneous's real upstream package. To stop
+Homebridge UI's "Update" (or a bare `npm install`) from silently pulling that in and
+overwriting this fork, `package.json` `name` and `src/settings.ts`'s `PLUGIN_NAME` were both
+changed to `@epthewizard/homebridge-lutron-radiora3` (scoped). `PLATFORM_NAME` (`LutronRadioRA3`,
+the `pluginAlias` in `config.schema.json` and the `"platform"` key in a user's `config.json`)
+was deliberately left unchanged, so existing platform config/secrets don't need to be touched —
+only the plugin/package identity changed. Accessories are keyed by package name though, so
+migrating an existing install requires clearing `cachedAccessories` (see README "Known gotchas").
+`npm link` must be redone under the new scoped name after this rename.
+
 ## Bug fixed: TypeError on ControlStations during discovery
 On RA3 firmware 26.05.26f000, `ReadRequest` to `/area/<id>/associatedcontrolstation` omits
 `Body` entirely for areas with no associated control station. `Processor.getAreaControlStations`
@@ -35,8 +46,9 @@ devDependency `homebridge-config-ui-x`) from source on Node 24 / newer clang. Us
 
 ## Local testing
 `npm run build` (tsc) and `npm run lint` (eslint) both pass clean after the above fixes.
-`npm link` done in this repo; still need `npm link homebridge-lutron-radiora3` inside the
-Homebridge install directory to consume it there.
+`npm link` done in this repo under the new scoped name; still need
+`npm link @epthewizard/homebridge-lutron-radiora3` inside the Homebridge install directory to
+consume it there.
 
-See also: project `.codex/AGENTS.md` (symlinked from `CLAUDE.md`) has the same gotchas in
-durable-instruction form.
+See also: project `.codex/AGENTS.md` (symlinked from `CLAUDE.md`) and `README.md` have the same
+gotchas in durable-instruction / user-facing form.

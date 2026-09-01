@@ -1,15 +1,15 @@
 {
-    "displayName": "Homebridge Lutron RadioRA 3",
-    "name": "homebridge-lutron-radiora3",
+    "displayName": "Homebridge Lutron RadioRA 3 (epthewizard fork)",
+    "name": "@epthewizard/homebridge-lutron-radiora3",
     "version": "0.1.0",
-    "description": "Homebridge support for Lutron RadioRA 3 keypads, etc.",
+    "description": "Homebridge support for Lutron RadioRA 3 keypads, etc. (epthewizard fork of cyaneous/homebridge-lutron-radiora3)",
     "license": "Apache-2.0",
     "repository": {
         "type": "git",
-        "url": "git://github.com/cyaneous/homebridge-lutron-radiora3.git"
+        "url": "git://github.com/epthewizard/homebridge-lutron-radiora3.git"
     },
     "bugs": {
-        "url": "https://github.com/cyaneous/homebridge-lutron-radiora3/issues"
+        "url": "https://github.com/epthewizard/homebridge-lutron-radiora3/issues"
     },
     "engines": {
         "node": ">=18.17.0",
