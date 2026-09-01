@@ -23,9 +23,12 @@ import {
     OneProjectDefinition,
     OneButtonGroupDefinition,
     OneDeviceDefinition,
+    OneZoneDefinition,
     OneZoneStatus,
     MultipleOccupancyGroupStatus,
     VirtualButtonDefinition,
+    ZoneDefinition,
+    ZoneStatus,
 } from './MessageBodyTypes';
 
 import TypedEmitter from 'typed-emitter';
@@ -217,6 +220,40 @@ export class Processor extends (EventEmitter as new () => TypedEmitter<Processor
         logDebug('pressing virtual button:', virtualButton.href);
         await this.client.request('CreateRequest', virtualButton.href + '/commandprocessor', {
             Command: { CommandType: 'PressAndRelease' },
+        });
+    }
+
+    public async getZoneDefinition(zoneHref: Href): Promise<ZoneDefinition> {
+        logDebug('getting zone definition:', zoneHref.href);
+        const raw = await this.client.request('ReadRequest', zoneHref.href);
+        const body = raw.Body as OneZoneDefinition | undefined;
+        if (body?.Zone !== undefined) {
+            return body.Zone;
+        }
+        throw new Error(`got bad response to getZoneDefinition() request for ${zoneHref.href}`);
+    }
+
+    public async getZoneStatus(zone: Href): Promise<ZoneStatus> {
+        logDebug('getting zone status:', zone.href);
+        const raw = await this.client.request('ReadRequest', zone.href + '/status');
+        const body = raw.Body as OneZoneStatus | undefined;
+        if (body?.ZoneStatus !== undefined) {
+            return body.ZoneStatus;
+        }
+        throw new Error(`got bad response to getZoneStatus() request for ${zone.href}`);
+    }
+
+    public subscribeToZoneStatus(zone: Href, callback: (response: Response) => void): void {
+        this.client.subscribe(zone.href + '/status', callback);
+    }
+
+    public async setZoneLevel(zone: Href, level: number): Promise<void> {
+        logDebug('setting zone level:', zone.href, level);
+        await this.client.request('CreateRequest', zone.href + '/commandprocessor', {
+            Command: {
+                CommandType: 'GoToLevel',
+                Parameter: [{ Type: 'Level', Value: level }],
+            },
         });
     }
 

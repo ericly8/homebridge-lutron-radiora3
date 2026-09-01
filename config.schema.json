@@ -35,6 +35,14 @@
               "type": "string",
               "title": "Virtual Button name (must match the name in the Lutron app exactly)"
             }
+          },
+          "zones": {
+            "type": "array",
+            "title": "Zones (switches/dimmers) to control directly, bypassing RA3's native HomeKit bridge",
+            "items": {
+              "type": "string",
+              "title": "Zone name (must match the name in the Lutron app exactly)"
+            }
           }
 
         }
@@ -75,6 +83,13 @@
           "key": "options.virtualButtons",
           "notitle": false,
           "title": "Virtual Buttons (scenes) to expose",
+          "type": "array",
+          "flex": "1 1 300px"
+        },
+        {
+          "key": "options.zones",
+          "notitle": false,
+          "title": "Zones to control directly (disable RA3's native HomeKit export for these first)",
           "type": "array",
           "flex": "1 1 300px"
         }

@@ -14,10 +14,12 @@ Supports:
 * Sunnata Keypads / Sunnata Hybrid Keypads → HomeKit Stateless Programmable Switches (single/double/long press per button)
 * Pico remotes (untested on real hardware beyond basic cases)
 * RA3 Virtual Buttons (scenes) → HomeKit momentary switches, opt-in (see below)
+* Direct switch/dimmer (zone) control → HomeKit Switch/Lightbulb, opt-in, bypassing RA3's
+  native HomeKit bridge (see below)
 
-Dimmers, switches, shades, etc. are **not** implemented here — RA3's Smart Bridge already
-exposes those to HomeKit natively. This plugin only fills the gap for keypads/Picos, which
-the Smart Bridge doesn't expose.
+Shades and fans aren't implemented yet. Switches/dimmers are only controlled directly when you
+opt a zone in via `options.zones` — otherwise RA3's Smart Bridge keeps exposing them to HomeKit
+natively, same as always.
 
 Based on [lutron-leap-js](https://github.com/thenewwazoo/lutron-leap-js) and
 [homebridge-lutron-caseta-leap](https://github.com/thenewwazoo/homebridge-lutron-caseta-leap/).
@@ -116,6 +118,35 @@ Setup:
 4. These are ordinary HomeKit switches, so they also work as triggers inside Home app/Shortcuts
    automations — just don't put more than one in the same Apple Home *Scene*, or you're back to
    the slow sequential behavior this is meant to avoid.
+
+## Direct switch/dimmer control (bypassing RA3's native HomeKit bridge)
+
+If a single switch or dimmer feels slow in HomeKit, that's not this plugin, and it never was —
+dimmers/switches are exposed to HomeKit by the Smart Bridge's own built-in bridge, a completely
+separate code path this plugin has no part in. This feature makes this plugin control the zone
+directly instead: a HomeKit `Switch` (or `Lightbulb`, for dimmable loads) backed by LEAP
+commands over the same persistent local connection keypad buttons already use.
+
+**This is opt-in per zone, and it has a real gotcha**: if you add a zone here while RA3's native
+bridge is still also exposing it, the same physical switch shows up **twice** in the Home app,
+with two independently-drifting states. Before adding a zone to `options.zones`, go disable that
+zone's HomeKit export in the Lutron app first.
+
+Setup:
+1. In the Lutron app, find the zone (switch/dimmer) you want and turn off its HomeKit export.
+2. Add the zone's exact name to `options.zones` in this plugin's config (Homebridge UI: "Zones
+   to control directly"). Nothing is touched by default — opt-in, one zone at a time.
+3. Restart Homebridge. It auto-detects dimmable zones (`Lightbulb` with a brightness slider) vs.
+   plain on/off zones (`Switch`) from the zone's own definition — nothing to configure per-type.
+4. State changes made physically (at the switch/keypad) or from another app are reflected back
+   into HomeKit live, via the same LEAP subscription mechanism keypad button presses use — this
+   isn't a one-way remote, it's full two-way control.
+
+This is new and only exercised against firmware `26.05.26f000` so far — if a zone doesn't
+respond, or reports the wrong on/off or brightness state, check Homebridge's debug log
+(`DEBUG='leap:*' `) for the exact LEAP command/response and file a note; the `GoToLevel` command
+shape this uses is the standard one across Lutron's LEAP protocol, but hasn't been verified
+against every RA3 zone/device type (shades and fans aren't handled by this yet at all).
 
 ## Publishing (production deployment)
 

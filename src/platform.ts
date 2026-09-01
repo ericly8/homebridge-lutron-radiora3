@@ -12,6 +12,7 @@ import {
     OneDeviceStatus,
     Response,
     VirtualButtonDefinition,
+    ZoneDefinition,
 } from './leap';
 
 import { API, APIEvent, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
@@ -22,6 +23,7 @@ import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
 import { SunnataKeypad } from './SunnataKeypad';
 import { PicoRemote } from './PicoRemote';
 import { VirtualButtonScene } from './VirtualButtonScene';
+import { ZoneAccessory } from './ZoneAccessory';
 
 type PlatformEvents = {
     unsolicited: (response: Response) => void;
@@ -33,6 +35,7 @@ export interface GlobalOptions {
     clickSpeedLong: 'quick' | 'default' | 'relaxed' | 'disabled';
     clickSpeedDouble: 'quick' | 'default' | 'relaxed' | 'disabled';
     virtualButtons: string[];
+    zones: string[];
 }
 
 interface ProcessorAuthEntry {
@@ -118,6 +121,7 @@ export class LutronRadioRA3Platform
                 clickSpeedDouble: 'default',
                 clickSpeedLong: 'default',
                 virtualButtons: [],
+                zones: [],
             },
             config.options,
         );
@@ -274,6 +278,22 @@ export class LutronRadioRA3Platform
                     }
                 }
             }
+
+            if (this.options.zones.length > 0) {
+                for (const zoneHref of area.AssociatedZones ?? []) {
+                    let zone: ZoneDefinition;
+                    try {
+                        zone = await processor.getZoneDefinition(zoneHref);
+                    } catch (e) {
+                        this.log.error('Failed to retrieve zone', zoneHref.href, ':', e);
+                        continue;
+                    }
+                    if (!this.options.zones.includes(zone.Name)) {
+                        continue;
+                    }
+                    this.processZone(processor, area, zone);
+                }
+            }
         }
 
         if (this.options.virtualButtons.length > 0) {
@@ -335,6 +355,49 @@ export class LutronRadioRA3Platform
                     this.log.debug(`registered new virtual button ${fullyQualifiedName} because it was new`);
                 }
                 return Promise.resolve(`Successfully wired virtual button ${fullyQualifiedName}`);
+            }
+        }
+    }
+
+    async processZone(processor: Processor, area: AreaDefinition, zone: ZoneDefinition): Promise<string> {
+        const uuid = this.api.hap.uuid.generate(zone.href);
+        const fullyQualifiedName = Array.from(new Set([area.Name, zone.Name])).join(' ');
+
+        let accessory: PlatformAccessory | undefined = this.accessories.get(uuid);
+        let isFromCache = true;
+        if (accessory === undefined) {
+            isFromCache = false;
+            this.log.debug(`Zone ${fullyQualifiedName} not found in accessory cache`);
+            accessory = new this.api.platformAccessory(fullyQualifiedName, uuid);
+        }
+        accessory.context.processorID = processor.processorID;
+        accessory.displayName = fullyQualifiedName;
+
+        const zoneAccessory = new ZoneAccessory(this, accessory, processor, zone);
+        const result = await zoneAccessory.initialize();
+
+        switch (result.kind) {
+            case DeviceWireResultType.Error: {
+                if (isFromCache) {
+                    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                    this.log.debug(`un-registered cached zone ${fullyQualifiedName} due to an error: ${result.reason}`);
+                }
+                return Promise.reject(new Error(`Failed to wire zone ${fullyQualifiedName}: ${result.reason}`));
+            }
+            case DeviceWireResultType.Skipped: {
+                if (isFromCache) {
+                    this.log.debug(`un-registered cached zone ${fullyQualifiedName} because it was skipped`);
+                    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                }
+                return Promise.resolve(`Skipped wiring zone: ${result.reason}`);
+            }
+            case DeviceWireResultType.Success: {
+                if (!isFromCache) {
+                    this.accessories.set(accessory.UUID, accessory);
+                    this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                    this.log.debug(`registered new zone ${fullyQualifiedName} because it was new`);
+                }
+                return Promise.resolve(`Successfully wired zone ${fullyQualifiedName}`);
             }
         }
     }
