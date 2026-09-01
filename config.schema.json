@@ -27,6 +27,14 @@
               { "title": "Medium (default)", "enum": ["medium"] },
               { "title": "Slow", "enum": ["slow"] }
             ]
+          },
+          "virtualButtons": {
+            "type": "array",
+            "title": "Virtual Buttons (scenes) to expose to HomeKit as switches",
+            "items": {
+              "type": "string",
+              "title": "Virtual Button name (must match the name in the Lutron app exactly)"
+            }
           }
 
         }
@@ -62,6 +70,13 @@
           "notitle": false,
           "type": "string",
           "flex": "1 1 150px"
+        },
+        {
+          "key": "options.virtualButtons",
+          "notitle": false,
+          "title": "Virtual Buttons (scenes) to expose",
+          "type": "array",
+          "flex": "1 1 300px"
         }
       ]
     },

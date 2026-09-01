@@ -18,12 +18,14 @@ import {
     MultipleButtonGroupExpandedDefinition,
     MultipleControlStationDefinition,
     MultipleDeviceDefinition,
+    MultipleVirtualButtonDefinition,
     OneControlStationDefinition,
     OneProjectDefinition,
     OneButtonGroupDefinition,
     OneDeviceDefinition,
     OneZoneStatus,
     MultipleOccupancyGroupStatus,
+    VirtualButtonDefinition,
 } from './MessageBodyTypes';
 
 import TypedEmitter from 'typed-emitter';
@@ -199,6 +201,23 @@ export class Processor extends (EventEmitter as new () => TypedEmitter<Processor
             return (raw.Body! as MultipleButtonGroupExpandedDefinition).ButtonGroupsExpanded;
         }
         throw new Error('got bad response to getDeviceButtonGroupsExpanded() request');
+    }
+
+    public async getVirtualButtons(): Promise<VirtualButtonDefinition[]> {
+        logDebug('getting virtual buttons');
+        const raw = await this.client.request('ReadRequest', '/virtualbutton');
+        const body = raw.Body as MultipleVirtualButtonDefinition | undefined;
+        if (body?.VirtualButtons !== undefined) {
+            return body.VirtualButtons;
+        }
+        return [];
+    }
+
+    public async pressVirtualButton(virtualButton: VirtualButtonDefinition): Promise<void> {
+        logDebug('pressing virtual button:', virtualButton.href);
+        await this.client.request('CreateRequest', virtualButton.href + '/commandprocessor', {
+            Command: { CommandType: 'PressAndRelease' },
+        });
     }
 
     public async processCommand(device: DeviceDefinition, command: object): Promise<void> {

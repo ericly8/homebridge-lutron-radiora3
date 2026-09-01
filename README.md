@@ -12,6 +12,7 @@ with, or silently overwritten by, that package via `npm install`/Homebridge UI's
 Supports:
 * Sunnata Keypads / Sunnata Hybrid Keypads → HomeKit Stateless Programmable Switches (single/double/long press per button)
 * Pico remotes (untested on real hardware beyond basic cases)
+* RA3 Virtual Buttons (scenes) → HomeKit momentary switches, opt-in (see below)
 
 Dimmers, switches, shades, etc. are **not** implemented here — RA3's Smart Bridge already
 exposes those to HomeKit natively. This plugin only fills the gap for keypads/Picos, which
@@ -82,6 +83,28 @@ Pairing/config happens through the plugin's custom Homebridge UI settings screen
    the plugin config — keep `config.json` private, these are real client certs for your processor.
 
 Multiple processors are supported — just repeat pairing for each; each gets its own `secrets` entry.
+
+## Scenes (Virtual Buttons) — fast, multi-device HomeKit "buttons"
+
+Apple Home Scenes are composed client-side: tapping one sends a separate HAP write to every
+accessory in the scene, one at a time — slow and visibly sequential with more than a couple
+of devices. RA3 Virtual Buttons avoid that entirely: each one triggers a Preset (a scene
+defined *on the processor*) with a single LEAP command, and the processor fires every
+affected zone over its own bus at once — the same mechanism a physical keypad scene button
+uses. Use these instead of Apple Home Scenes for anything multi-device.
+
+Setup:
+1. In the Lutron app (or Designer), create/name the Virtual Buttons you want (each tied to a
+   Preset/scene) — this plugin doesn't create them, only exposes existing ones.
+2. In this plugin's config, add the Virtual Button's exact name to `options.virtualButtons`
+   (Homebridge UI: "Virtual Buttons (scenes) to expose"). Nothing is exposed by default —
+   this is opt-in, so internal/programming-only virtual buttons in your project don't clutter
+   the Home app.
+3. Restart Homebridge. Each configured name shows up as a HomeKit switch; tapping it fires the
+   scene, and the switch flips back off ~1s later (it's momentary, not persistent state).
+4. These are ordinary HomeKit switches, so they also work as triggers inside Home app/Shortcuts
+   automations — just don't put more than one in the same Apple Home *Scene*, or you're back to
+   the slow sequential behavior this is meant to avoid.
 
 ## Production deployment
 

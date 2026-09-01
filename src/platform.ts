@@ -11,6 +11,7 @@ import {
     DeviceDefinition,
     OneDeviceStatus,
     Response,
+    VirtualButtonDefinition,
 } from './leap';
 
 import { API, APIEvent, DynamicPlatformPlugin, Logging, PlatformAccessory, PlatformConfig } from 'homebridge';
@@ -20,6 +21,7 @@ import TypedEmitter from 'typed-emitter';
 import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
 import { SunnataKeypad } from './SunnataKeypad';
 import { PicoRemote } from './PicoRemote';
+import { VirtualButtonScene } from './VirtualButtonScene';
 
 type PlatformEvents = {
     unsolicited: (response: Response) => void;
@@ -30,6 +32,7 @@ export interface GlobalOptions {
     filterPico: boolean;
     clickSpeedLong: 'quick' | 'default' | 'relaxed' | 'disabled';
     clickSpeedDouble: 'quick' | 'default' | 'relaxed' | 'disabled';
+    virtualButtons: string[];
 }
 
 interface ProcessorAuthEntry {
@@ -114,6 +117,7 @@ export class LutronRadioRA3Platform
                 filterPico: false,
                 clickSpeedDouble: 'default',
                 clickSpeedLong: 'default',
+                virtualButtons: [],
             },
             config.options,
         );
@@ -272,7 +276,67 @@ export class LutronRadioRA3Platform
             }
         }
 
+        if (this.options.virtualButtons.length > 0) {
+            let virtualButtons: VirtualButtonDefinition[];
+            try {
+                virtualButtons = await processor.getVirtualButtons();
+            } catch (e) {
+                this.log.error('Failed to retrieve virtual buttons for processor', processor.processorID, ':', e);
+                virtualButtons = [];
+            }
+
+            for (const virtualButton of virtualButtons) {
+                if (!this.options.virtualButtons.includes(virtualButton.Name)) {
+                    continue;
+                }
+                this.processVirtualButton(processor, virtualButton);
+            }
+        }
+
         processor.on('unsolicited', this.handleUnsolicitedMessage.bind(this));
+    }
+
+    async processVirtualButton(processor: Processor, virtualButton: VirtualButtonDefinition): Promise<string> {
+        const uuid = this.api.hap.uuid.generate(virtualButton.href);
+        const fullyQualifiedName = virtualButton.Name;
+
+        let accessory: PlatformAccessory | undefined = this.accessories.get(uuid);
+        let isFromCache = true;
+        if (accessory === undefined) {
+            isFromCache = false;
+            this.log.debug(`Virtual button ${fullyQualifiedName} not found in accessory cache`);
+            accessory = new this.api.platformAccessory(fullyQualifiedName, uuid);
+        }
+        accessory.context.processorID = processor.processorID;
+        accessory.displayName = fullyQualifiedName;
+
+        const scene = new VirtualButtonScene(this, accessory, processor, virtualButton);
+        const result = await scene.initialize();
+
+        switch (result.kind) {
+            case DeviceWireResultType.Error: {
+                if (isFromCache) {
+                    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                    this.log.debug(`un-registered cached virtual button ${fullyQualifiedName} due to an error: ${result.reason}`);
+                }
+                return Promise.reject(new Error(`Failed to wire virtual button ${fullyQualifiedName}: ${result.reason}`));
+            }
+            case DeviceWireResultType.Skipped: {
+                if (isFromCache) {
+                    this.log.debug(`un-registered cached virtual button ${fullyQualifiedName} because it was skipped`);
+                    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                }
+                return Promise.resolve(`Skipped wiring virtual button: ${result.reason}`);
+            }
+            case DeviceWireResultType.Success: {
+                if (!isFromCache) {
+                    this.accessories.set(accessory.UUID, accessory);
+                    this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+                    this.log.debug(`registered new virtual button ${fullyQualifiedName} because it was new`);
+                }
+                return Promise.resolve(`Successfully wired virtual button ${fullyQualifiedName}`);
+            }
+        }
     }
 
     async processDevice(
