@@ -5,9 +5,10 @@ against firmware `26.05.26f000`. The platform explicitly checks `DeviceType ===
 'RadioRa3Processor'` and `ProductType === 'Lutron RadioRA 3 Project'` on startup and refuses
 to run against anything else (RA2, Caseta) — this is not a generic Lutron plugin.
 
-Published on npm as `homebridge-lutron-radiora3` (unscoped) by cyaneous — this fork is
-deliberately scoped as `@epthewizard/homebridge-lutron-radiora3` so it can never be confused
-with, or silently overwritten by, that package via `npm install`/Homebridge UI's "Update" button.
+`homebridge-lutron-radiora3` (unscoped) on npm is cyaneous's real upstream package — this fork
+is published separately as `@epthewizard/homebridge-lutron-radiora3` (scoped) so it shows up
+in Homebridge UI's plugin search under its own identity and can never be confused with, or
+silently overwritten by, the original via "Update".
 
 Supports:
 * Sunnata Keypads / Sunnata Hybrid Keypads → HomeKit Stateless Programmable Switches (single/double/long press per button)
@@ -31,6 +32,9 @@ Based on [lutron-leap-js](https://github.com/thenewwazoo/lutron-leap-js) and
   discovery + a direct TLS connection to the processor on port 8081).
 
 ## Dev testing setup (this checkout)
+
+`npm link` below is for iterating locally before you publish an update — see "Publishing
+(production deployment)" further down for how it actually gets onto a real Homebridge install.
 
 ```bash
 git clone git@github.com:epthewizard/homebridge-lutron-radiora3.git
@@ -93,6 +97,13 @@ defined *on the processor*) with a single LEAP command, and the processor fires 
 affected zone over its own bus at once — the same mechanism a physical keypad scene button
 uses. Use these instead of Apple Home Scenes for anything multi-device.
 
+This is not limited to keypad-associated loads — a Preset can affect any dimmer, switch, or
+shade in the whole RA3 project, including ones exposed to HomeKit natively by the Smart Bridge.
+So if RA3's *native* HomeKit bridge feels slow when you fire a multi-device Apple Home Scene
+against those, the fix is the same: define the change as a Preset/Virtual Button in Lutron,
+expose that one virtual button here, and trigger it (directly or via automation) instead of
+the Apple Home Scene.
+
 Setup:
 1. In the Lutron app (or Designer), create/name the Virtual Buttons you want (each tied to a
    Preset/scene) — this plugin doesn't create them, only exposes existing ones.
@@ -106,33 +117,43 @@ Setup:
    automations — just don't put more than one in the same Apple Home *Scene*, or you're back to
    the slow sequential behavior this is meant to avoid.
 
-## Production deployment
+## Publishing (production deployment)
 
-For a personal single-house setup, "production" is just: build once, keep it linked, restart
-Homebridge on updates.
+This fork is published to the public npm registry as `@epthewizard/homebridge-lutron-radiora3`,
+which is what makes it installable the normal way — Homebridge UI's Plugins search, on any
+Homebridge install (Docker, Unraid, Pi, whatever), no shell access needed.
 
-**Same machine as dev** — nothing extra needed beyond the dev setup above; `npm link` persists
-across restarts since it's a symlink in the global `node_modules`.
-
-**Homebridge runs on a different machine (e.g. a Pi)** — pick one:
+**First publish / publishing an update** — from this checkout, on your dev machine:
 
 ```bash
-# Option A: build on the Pi directly (simplest, avoids cross-arch native-module issues)
-git clone git@github.com:epthewizard/homebridge-lutron-radiora3.git
-cd homebridge-lutron-radiora3 && npm install --ignore-scripts && npm run build && npm link
-# then, in the Homebridge install dir on the Pi:
-npm link @epthewizard/homebridge-lutron-radiora3
-
-# Option B: build on dev machine, ship a tarball
-npm run build
-npm pack                       # produces epthewizard-homebridge-lutron-radiora3-<version>.tgz
-scp epthewizard-homebridge-lutron-radiora3-*.tgz pi@homebridge:/tmp/
-# on the Pi, inside the Homebridge install dir:
-npm install /tmp/epthewizard-homebridge-lutron-radiora3-*.tgz
+npm login                 # one-time; opens a browser to authorize this machine to your npm account
+npm version patch         # bumps package.json's version (or `minor`/`major`) — npm refuses to
+                           # republish an already-published version number
+npm publish               # runs prepublishOnly (lint + build) automatically, then publishes
 ```
 
-Redeploying after a change: pull, rebuild, restart Homebridge. There's no hot reload outside
-`npm run watch` in dev.
+`npm login`/`npm publish` need *your* npm credentials — this is not something that can be
+scripted or done on your behalf, run it yourself in a terminal.
+
+**Installing on Homebridge (any host, including Unraid Docker)** — in Homebridge UI:
+
+1. Plugins tab → search `homebridge-lutron-radiora3` (or `epthewizard`).
+2. Find `@epthewizard/homebridge-lutron-radiora3` in the results and click Install.
+3. Restart Homebridge.
+4. Configure it: click Settings on the plugin card → this opens the custom pairing UI (see
+   "Pairing with the processor" above) → discover your processor → press its physical pairing
+   button → save.
+
+That's it — no `npm link`, no container shell, no tarballs. Future updates are the same UI's
+Update button, since it's now a real published package under a name only you own.
+
+### Unraid specifically
+
+The Homebridge container (whether the `oznu/homebridge` or `homebridge/homebridge` Community
+App) already runs Homebridge UI on the port you set up during the Unraid template install —
+open that in a browser and follow the 4 steps above exactly as you would on any other host.
+You never need Unraid's Docker "Console" button or `docker exec` for this — that's only a
+fallback for plugins that aren't published, which this no longer is.
 
 ## Known gotchas
 
@@ -146,6 +167,9 @@ Redeploying after a change: pull, rebuild, restart Homebridge. There's no hot re
   LEAP calls, since firmware behavior here isn't fully documented by Lutron.
 - `npm install` (without `--ignore-scripts`) may fail building `node-pty` on newer toolchains —
   see Dev setup above.
+- `.npmignore` previously excluded `dist/` (a leftover from a generic project template) — every
+  publish would have shipped a package with no compiled code in it. Fixed; if `.npmignore` is
+  ever touched again, confirm `npm pack --dry-run` still lists `dist/*.js` files.
 - **Migrating from the unscoped `homebridge-lutron-radiora3`**: accessories are registered under
   the npm package name, so switching to the `@epthewizard/...` scope orphans any accessories
   cached under the old name. Uninstall the old plugin, clear
