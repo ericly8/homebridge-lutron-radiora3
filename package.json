@@ -1,7 +1,7 @@
 {
     "displayName": "Homebridge Lutron RadioRA 3 (epthewizard fork)",
     "name": "@epthewizard/homebridge-lutron-radiora3",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Homebridge support for Lutron RadioRA 3 keypads, etc. (epthewizard fork of cyaneous/homebridge-lutron-radiora3)",
     "license": "Apache-2.0",
     "repository": {
