@@ -18,8 +18,8 @@ import { API, APIEvent, DynamicPlatformPlugin, Logging, PlatformAccessory, Platf
 import TypedEmitter from 'typed-emitter';
 
 import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
-import { SunnataKeypad } from './sunnataKeypad';
-import { PicoRemote } from './picoRemote';
+import { SunnataKeypad } from './SunnataKeypad';
+import { PicoRemote } from './PicoRemote';
 
 type PlatformEvents = {
     unsolicited: (response: Response) => void;

@@ -18,6 +18,7 @@ import {
     MultipleButtonGroupExpandedDefinition,
     MultipleControlStationDefinition,
     MultipleDeviceDefinition,
+    OneControlStationDefinition,
     OneProjectDefinition,
     OneButtonGroupDefinition,
     OneDeviceDefinition,
@@ -168,10 +169,18 @@ export class Processor extends (EventEmitter as new () => TypedEmitter<Processor
     public async getAreaControlStations(area: AreaDefinition): Promise<ControlStationDefinition[]> {
         logDebug('getting control stations for area:', area.href);
         const raw = await this.client.request('ReadRequest', area.href + '/associatedcontrolstation');
-        if ((raw.Body! as MultipleControlStationDefinition).ControlStations !== undefined) {
-            return (raw.Body! as MultipleControlStationDefinition).ControlStations;
+        const body = raw.Body as MultipleControlStationDefinition | OneControlStationDefinition | undefined;
+        if (body === undefined) {
+            // RA3 firmware omits the Body entirely for areas with no associated control station.
+            return [];
         }
-        throw new Error('got bad response to getAreaControlStations() request');
+        if ((body as MultipleControlStationDefinition).ControlStations !== undefined) {
+            return (body as MultipleControlStationDefinition).ControlStations;
+        }
+        if ((body as OneControlStationDefinition).ControlStation !== undefined) {
+            return [(body as OneControlStationDefinition).ControlStation];
+        }
+        return [];
     }
 
     public async getDevice(device: DeviceDefinition): Promise<DeviceDefinition> {

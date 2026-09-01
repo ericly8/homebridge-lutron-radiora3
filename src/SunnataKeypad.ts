@@ -1,7 +1,7 @@
 import { Service, PlatformAccessory } from 'homebridge';
 
 import { GlobalOptions, LutronRadioRA3Platform, DeviceWireResult, DeviceWireResultType } from './platform';
-import { ButtonTracker } from './buttonTracker';
+import { ButtonTracker } from './ButtonTracker';
 import { ExceptionDetail, OneButtonStatusEvent, Response, Processor } from './leap';
 
 export class SunnataKeypad {
