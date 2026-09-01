@@ -1,5 +1,37 @@
 # @epthewizard/homebridge-lutron-radiora3
 
+## TL;DR — what this is, and how to check it's working right now
+
+This is a Homebridge plugin that talks directly to your Lutron RadioRA 3 processor and adds
+three things HomeKit doesn't otherwise get from RA3: (1) **keypad/Pico remote button presses**
+as HomeKit accessories, (2) **fast whole-house scenes** (one tap instead of Apple Home's
+slow one-device-at-a-time Scenes), and (3) **direct, faster control of individual switches/
+dimmers** for the ones you opt in, instead of RA3's own built-in HomeKit bridge. None of this
+needs the internet to run day-to-day — it's a local plugin talking to a local processor over
+your LAN. The only step that ever needed internet was `npm publish`/installing it once via
+Homebridge UI's plugin search.
+
+**To check whether it's actually installed and working right now:**
+1. Open Homebridge UI (whatever URL/port you use on your Unraid box) in a browser — this is a
+   page served by your own Homebridge container, so it works even with your internet down.
+2. **Plugins** tab → look for `@epthewizard/homebridge-lutron-radiora3` in your installed list.
+   If it's there, it installed successfully.
+3. Click **Settings** on its card → this should open a custom pairing screen (not a plain form)
+   → if you haven't paired yet, follow "Pairing with the processor" below.
+4. **Logs** tab (or `Homebridge Logs` in the UI) → look for lines starting `[Lutron RadioRA 3]`.
+   `Processor <id> is running firmware ...` means it found and connected to your processor.
+   `Device ... not found in accessory cache` / `Found a Sunnata...` lines mean it's discovering
+   your keypads. Errors here are the fastest way to tell what's actually wrong.
+5. In the Home app, look for new accessories named after your keypads/Picos — those only show
+   up once discovery in step 4 succeeds.
+
+If nothing shows up in step 2, the plugin never actually got installed (see "Publishing" below
+for the install steps) — that's the most common reason "I did it all" and "nothing's happening"
+coexist: the `npm publish` half and the "install it onto this specific Homebridge instance"
+half are two separate steps.
+
+---
+
 Homebridge plugin for **Lutron RadioRA 3** processors (LEAP protocol). Confirmed working
 against firmware `26.05.26f000`. The platform explicitly checks `DeviceType ===
 'RadioRa3Processor'` and `ProductType === 'Lutron RadioRA 3 Project'` on startup and refuses
