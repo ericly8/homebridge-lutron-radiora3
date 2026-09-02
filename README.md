@@ -176,6 +176,9 @@ Setup:
    Nothing is touched by default — opt-in, one zone at a time.
 3. Restart Homebridge. It auto-detects dimmable zones (`Lightbulb` with a brightness slider) vs.
    plain on/off zones (`Switch`) from the zone's own definition — nothing to configure per-type.
+   **This doesn't add dimming to anything** — a zone only gets a brightness slider if it's a
+   physically dimmable load and RA3 already knows that; a plain on/off switch stays a plain
+   on/off switch here too, same as it is in the Lutron app and in RA3's native bridge.
 4. State changes made physically (at the switch/keypad) or from another app are reflected back
    into HomeKit live, via the same LEAP subscription mechanism keypad button presses use — this
    isn't a one-way remote, it's full two-way control.
@@ -218,22 +221,49 @@ scripted or done on your behalf, run it yourself in a terminal.
 > separate search index, which can take hours to catch up — confirmed directly: `npm view
 > @epthewizard/homebridge-lutron-radiora3` found it immediately after publishing, but it didn't
 > appear in npm's own search API for the exact same package name many hours later. If search
-> comes up empty, install by exact name instead — it doesn't depend on the search index:
-> ```bash
-> # in a shell inside the Homebridge container (Unraid: Docker tab → container icon → Console),
-> # from the Homebridge storage directory (check your container's path mappings if unsure):
-> npm install @epthewizard/homebridge-lutron-radiora3
-> ```
-> then restart Homebridge — it'll show up under Plugins → Installed even though search can't find it yet.
+> comes up empty, install by exact name instead — it doesn't depend on the search index, and
+> `hb-service` doesn't use search at all, so this always works regardless of indexing lag.
 
-Future updates are the same UI's Update button (once search catches up), since it's now a real
-published package under a name only you own.
+## Manual install via the Homebridge Terminal (no search needed)
+
+Every Homebridge UI has a **Terminal** tab that drops you into a shell already inside the
+Homebridge container — on the official `homebridge/homebridge` image (what Unraid's Community
+App uses) it identifies itself like this:
+
+```
+Homebridge Terminal
+Node.js Version: v24.20.0
+Node.js Path: /opt/homebridge/bin/node
+Plugin Path: /var/lib/homebridge/node_modules
+Install Plugin: hb-service add homebridge-plugin-name
+Remove Plugin: hb-service remove homebridge-plugin-name
+root@Tower:/homebridge $
+```
+
+`hb-service` is Homebridge's own plugin-install tool — it installs straight from the npm
+registry (bypassing the search index entirely, so the lag above never applies here) and
+restarts Homebridge for you. From that prompt:
+
+```bash
+hb-service add @epthewizard/homebridge-lutron-radiora3
+```
+
+That's it — no path-guessing, no manual `npm install`, no separate restart step. To update to a
+newer version later, same command again (or `hb-service update @epthewizard/homebridge-lutron-radiora3`
+if your version has that subcommand). To remove it: `hb-service remove @epthewizard/homebridge-lutron-radiora3`.
+
+Future updates are the same UI's Plugins-tab Update button (once search catches up) or the
+`hb-service add`/`update` command above (always works) — either way, since it's a real published
+package under a name only you own.
 
 ### Unraid specifically
 
-The Homebridge container (whether the `oznu/homebridge` or `homebridge/homebridge` Community
-App) already runs Homebridge UI on the port you set up during the Unraid template install —
-open that in a browser and follow the 4 steps above exactly as you would on any other host.
+Confirmed working setup: the official `homebridge/homebridge` Community App image (`hb-service`
+present, plugins under `/var/lib/homebridge/node_modules`). Homebridge UI runs on the port you
+set during the Unraid template install — open that in a browser, use the **Terminal** tab
+directly for `hb-service add`, or the **Plugins** tab search if it's caught up. Either way,
+you never need Unraid's separate Docker "Console" button/`docker exec` — Homebridge UI's own
+Terminal tab already gives you a shell inside the container.
 
 ## Known gotchas
 

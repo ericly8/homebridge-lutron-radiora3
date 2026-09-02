@@ -9,7 +9,16 @@ Current feature set (all detailed in `README.md`, don't duplicate the explanatio
 keypad/Pico button presses (`SunnataKeypad.ts`/`PicoRemote.ts`), RA3 Virtual Button scenes as
 momentary HomeKit switches (`VirtualButtonScene.ts`, opt-in via `options.virtualButtons`), and
 direct two-way zone (switch/dimmer) control bypassing RA3's native HomeKit bridge
-(`ZoneAccessory.ts`, opt-in via `options.zones`).
+(`ZoneAccessory.ts`, opt-in via `options.zones`). Dimming is never added to a load that isn't
+already physically dimmable — the plugin mirrors RA3's own zone capability, it doesn't invent one.
+
+Both opt-in lists are configured via a live picker in the plugin's custom settings screen
+(`homebridge-ui/`), not by typing names: `homebridge-ui/server.js`'s `/browse` endpoint opens
+its own short-lived `LeapClient`+`Processor` connection (separate from the running plugin's
+connection, same pattern as the existing `/connect` pairing endpoint) to fetch real virtual
+button/zone names, and `homebridge-ui/public/index.html` renders them as checkboxes. If you add
+a new opt-in-by-name config list in the future, wire it through this picker too rather than
+adding another blind text field — that was explicitly the thing the user disliked.
 
 Global instructions (`~/.codex/AGENTS.md`, symlinked from `~/.claude/CLAUDE.md`) apply on top of
 this file and are canonical for cross-project rules (push/deploy policy, Serena/jCodeMunch/CodeGraph
@@ -28,10 +37,20 @@ tool usage, end-of-turn auto-commit). This file holds only what's specific to th
   Homebridge install directory, for local end-to-end testing against a real processor.
 - Production installs go through the public npm registry now, not `npm link`/tarballs: bump
   version (`npm version patch`), `npm publish` (needs the user's own `npm login` — never run
-  this without being asked, it's a real public publish). Then Homebridge UI's Plugins search
-  finds it on any host (this is what made Unraid/Docker installs simple — no container shell
-  needed). `publishConfig.access: "public"` in `package.json` is required for a scoped package
-  to publish for free; don't remove it.
+  this without being asked, it's a real public publish). `publishConfig.access: "public"` in
+  `package.json` is required for a scoped package to publish for free; don't remove it.
+- User's confirmed Homebridge host: Unraid, official `homebridge/homebridge` Docker image
+  (`hb-service` available, plugins under `/var/lib/homebridge/node_modules`, Node v24.20.0 in
+  that container as of 2026-09). Homebridge UI's own **Terminal** tab gives a shell directly —
+  no need for Unraid's separate Docker "Console"/`docker exec`. Reliable install/update
+  regardless of npm search state: `hb-service add @epthewizard/homebridge-lutron-radiora3`
+  (installs straight from the registry, restarts Homebridge automatically).
+- **npm's search index lags the registry, confirmed directly** (queried
+  `registry.npmjs.org/-/v1/search` ourselves): a freshly published/bumped scoped package can be
+  `npm view`-able (and `hb-service add`-able) immediately while not showing up in Homebridge
+  UI's Plugins search for hours. Not a bug in this repo — don't go looking for one if the user
+  reports "it's not showing up in search" right after a publish; point them at `hb-service add`
+  or `npm install <exact name>` instead, both of which hit the registry directly.
 
 ## Known gotcha: case-sensitive imports
 Dev happens on macOS (case-insensitive filesystem), but Homebridge typically runs on Linux
