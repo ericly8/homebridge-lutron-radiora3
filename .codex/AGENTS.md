@@ -25,11 +25,18 @@ this file and are canonical for cross-project rules (push/deploy policy, Serena/
 tool usage, end-of-turn auto-commit). This file holds only what's specific to this repo.
 
 ## Build / lint / link
-- `npm install` — devDependencies pull in `homebridge-config-ui-x`, which depends on
-  `node-pty-prebuilt-multiarch` (native addon). It fails to build from source on newer
-  Node/clang toolchains (verified failing on Node 24 / Xcode clang here). Since it's only
-  needed to actually run `homebridge-config-ui-x`'s terminal feature, not to build/lint/test
-  this plugin, use `npm install --ignore-scripts` when the plain install fails on that addon.
+- `npm install` — plain install, no flags needed. `homebridge-config-ui-x` (devDependency,
+  pulled in `node-pty-prebuilt-multiarch`'s native addon, which fails to build from source on
+  newer Node/clang/gcc toolchains — verified failing on Node 24 both locally via Xcode clang and
+  on the user's Unraid container via gcc) was removed from `devDependencies` entirely on
+  2026-09-02: it was never imported anywhere in `src/`/`homebridge-ui/` (grep-confirmed), so it
+  bought nothing for build/lint/test and only broke installs. This mattered beyond local dev:
+  npm's git-dependency "prepare" step (`npm install <git-url>`, the only way to test unpublished
+  changes before a version bump) force-installs *all* devDependencies in a temp clone to run
+  `tsc`, so this native-addon failure broke `npm install <git-url>` for every user, not just
+  local `npm install` here. If a devDependency ever needs `homebridge-config-ui-x` back (e.g. to
+  manually test the Homebridge UI terminal), install it ad hoc (`npm install
+  homebridge-config-ui-x --no-save`) rather than committing it to `package.json` again.
 - `npm run build` — `rimraf dist && tsc`. `rootDir`/`include` in `tsconfig.json` is `src/` —
   any source file must live under `src/` or it's silently excluded from the build (see gotcha below).
 - `npm run lint` — eslint over `src/**.ts`.

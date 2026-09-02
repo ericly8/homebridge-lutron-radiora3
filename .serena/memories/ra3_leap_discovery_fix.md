@@ -38,11 +38,17 @@ both `SunnataKeypad.ts` and `PicoRemote.ts` — actual files are `SunnataKeypad.
 `PicoRemote.ts`, `ButtonTracker.ts`. Added `forceConsistentCasingInFileNames: true` to
 `tsconfig.json` so `tsc` catches this class of bug at compile time going forward — don't remove it.
 
-## Build environment note
-`npm install` fails building `node-pty-prebuilt-multiarch` (transitive dep of
-devDependency `homebridge-config-ui-x`) from source on Node 24 / newer clang. Use
-`npm install --ignore-scripts` — not needed to build/lint/test the plugin itself, only to run
-`homebridge-config-ui-x`'s terminal feature.
+## Build environment note (fixed 2026-09-02, was previously a workaround)
+`homebridge-config-ui-x` (devDependency, pulled in `node-pty-prebuilt-multiarch`'s native
+addon, which failed to build from source on Node 24 / newer clang or gcc) was **removed from
+`devDependencies` entirely** — grep confirmed it was never imported anywhere in
+`src/`/`homebridge-ui/`, so it bought nothing for build/lint/test. This wasn't just a local-dev
+annoyance: npm's git-dependency "prepare" step (`npm install <git-url>`, needed to test
+unpublished changes) force-installs *all* devDependencies in a temp clone to run `tsc`, so this
+one broken native addon broke `npm install <git-url>` for every user trying to test pre-release
+code — surfaced live 2026-09-02 when the user tried it on their Unraid Homebridge container.
+Plain `npm install` now works with no flags; the old `--ignore-scripts` workaround is no longer
+needed (and would have skipped the `prepare`/`tsc` build step too, which git installs need).
 
 ## Local testing
 `npm run build` (tsc) and `npm run lint` (eslint) both pass clean after the above fixes.
