@@ -74,11 +74,7 @@ Based on [lutron-leap-js](https://github.com/thenewwazoo/lutron-leap-js) and
 git clone git@github.com:epthewizard/homebridge-lutron-radiora3.git
 cd homebridge-lutron-radiora3
 
-# homebridge-config-ui-x pulls in node-pty, a native addon that fails to build from
-# source on newer Node/clang toolchains. It's only needed for the UI's terminal
-# feature, not for building/running this plugin, so skip its install scripts:
-npm install --ignore-scripts
-
+npm install
 npm run build      # rimraf dist && tsc
 npm run lint        # eslint
 
@@ -265,6 +261,33 @@ directly for `hb-service add`, or the **Plugins** tab search if it's caught up. 
 you never need Unraid's separate Docker "Console" button/`docker exec` — Homebridge UI's own
 Terminal tab already gives you a shell inside the container.
 
+## Installing a pre-release build directly from GitHub
+
+Before something is published to npm (see "Publishing" above), you can still install straight
+from this repo's `main` branch on a real Homebridge host — useful for testing a fix before
+bumping the version. From the Homebridge Terminal (see "Manual install" above for how to get a
+shell there):
+
+```bash
+npm install https://github.com/epthewizard/homebridge-lutron-radiora3.git#main --prefix /var/lib/homebridge
+```
+
+Adjust `--prefix` to wherever Homebridge's own `node_modules` actually lives on your host — it's
+the `Plugin Path` the Homebridge Terminal prints on connect (`/var/lib/homebridge` on the
+official Docker image). This clones the repo, builds it (`npm run build` via the `prepare`
+script — see the `homebridge-config-ui-x` gotcha below, without that fix this step used to fail),
+and installs it like any other npm dependency. Restart Homebridge afterward to pick it up.
+
+**Uninstall / go back to the published version:**
+
+```bash
+hb-service remove @epthewizard/homebridge-lutron-radiora3   # removes it entirely, or:
+npm install @epthewizard/homebridge-lutron-radiora3 --prefix /var/lib/homebridge   # swap back to the npm release
+```
+
+Both install under the same package name, so either command cleanly replaces the git-installed
+copy — no need to remove it as a separate step first.
+
 ## Known gotchas
 
 - **Case-sensitive imports**: dev happens on macOS (case-insensitive FS); Homebridge usually
@@ -275,8 +298,12 @@ Terminal tab already gives you a shell inside the container.
   returns no body at all for areas with no control station. `Processor.get*` methods treat a
   missing/unexpected body as "empty result," not an error; keep that pattern if you add new
   LEAP calls, since firmware behavior here isn't fully documented by Lutron.
-- `npm install` (without `--ignore-scripts`) may fail building `node-pty` on newer toolchains —
-  see Dev setup above.
+- **`homebridge-config-ui-x` was removed from `devDependencies` (2026-09-02)**: it was never
+  actually imported by this plugin's code, but npm's git-dependency install step force-builds
+  *all* devDependencies, and that package's native `node-pty` addon failed to compile on newer
+  Node/clang/gcc — which broke `npm install <git-url>` (see below) for everyone. Plain `npm
+  install` needs no flags now; don't add it back to `devDependencies` (install it ad hoc with
+  `--no-save` if you need to manually test the Homebridge UI terminal).
 - `.npmignore` previously excluded `dist/` (a leftover from a generic project template) — every
   publish would have shipped a package with no compiled code in it. Fixed; if `.npmignore` is
   ever touched again, confirm `npm pack --dry-run` still lists `dist/*.js` files.
