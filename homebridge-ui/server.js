@@ -27,9 +27,15 @@ class PluginUiServer extends HomebridgePluginUiServer {
     }
 
     async doConnect({ secrets, processorID, ipAddress }) {
+        // This connection only exists to verify the stored secrets still work; the
+        // running plugin holds the real persistent connection. Must be closed here or
+        // it leaks a live connection to the processor every time this fires (e.g. on
+        // every mDNS re-announcement while the settings screen is open), eventually
+        // exhausting the processor's connection slots and hanging later requests
+        // (like /browse) that need a fresh connection of their own.
         console.log('Got request to connect', processorID, 'at', ipAddress, ' with secrets', JSON.stringify(secrets));
+        const client = new LeapClient(ipAddress, 8081 /*TODO magic number*/, secrets.ca, secrets.key, secrets.cert);
         try {
-            const client = new LeapClient(ipAddress, 8081 /*TODO magic number*/, secrets.ca, secrets.key, secrets.cert);
             await client.connect();
             console.log('client connected to', processorID, ipAddress);
             // TODO actually do a ping here, maybe return LEAP version?
@@ -37,6 +43,8 @@ class PluginUiServer extends HomebridgePluginUiServer {
             console.log('failed to connect to', processorID, e);
             this.pushEvent('failed', { processorID: processorID, reason: e.message });
             throw e;
+        } finally {
+            client.close();
         }
         this.pushEvent('connected', processorID);
     }

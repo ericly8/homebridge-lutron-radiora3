@@ -19,6 +19,7 @@ import TypedEmitter from 'typed-emitter';
 import { v4 as uuidv4 } from 'uuid';
 
 const logDebug = debug('leap:protocol:client');
+const CONNECT_TIMEOUT_MS = 10000;
 
 export interface Message {
     CommuniqueType: CommuniqueType;
@@ -170,13 +171,22 @@ export class LeapClient extends (EventEmitter as new () => TypedEmitter<LeapClie
                     logDebug('connected!');
                 });
 
+                const connectTimeout = setTimeout(() => {
+                    logDebug('connection to', this.host, this.port, 'timed out');
+                    this.connected = null;
+                    this.socket?.destroy();
+                    reject(new Error(`connection to ${this.host}:${this.port} timed out after ${CONNECT_TIMEOUT_MS}ms`));
+                }, CONNECT_TIMEOUT_MS);
+
                 this.socket.once('secureConnect', () => {
                     logDebug('securely connected');
+                    clearTimeout(connectTimeout);
                     this._onConnect(resolve, reject);
                 });
 
                 this.socket.once('error', (e) => {
                     logDebug('connection failed: ', e);
+                    clearTimeout(connectTimeout);
                     this.connected = null;
                     reject(e);
                 });
