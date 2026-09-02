@@ -37,6 +37,13 @@ states. The user must manually disable that zone's native HomeKit export in the 
 *before* adding it to `options.zones`. This is a one-at-a-time manual migration, not a flag that
 flips everything at once — by design, to limit blast radius from an unverified new feature.
 
+## Common user misconception, worth heading off
+Users may assume this adds dimming capability to switches generally, or that opting in "gives
+dimming to all of them." It doesn't and can't — `dimmable` is purely read from
+`ZoneDefinition.ControlType === 'Dimmed'`, i.e. this only mirrors whatever RA3 already knows the
+hardware supports. A plain on/off switch stays a plain `Switch` here; nothing about this feature
+changes what's physically possible for a given load.
+
 ## Scope not covered
 Shades and fans are explicitly out of scope for this pass (would need `WindowCovering`/`Fan`
 services and different status fields — `Tilt`, `FanSpeed` — already typed in
