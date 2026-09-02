@@ -1,5 +1,5 @@
 const { HomebridgePluginUiServer, RequestError } = require('@homebridge/plugin-ui-utils');
-const { ProcessorFinder, LeapClient, PairingClient } = require('../dist/leap');
+const { ProcessorFinder, LeapClient, PairingClient, Processor } = require('../dist/leap');
 
 const forge = require('node-forge');
 
@@ -16,6 +16,7 @@ class PluginUiServer extends HomebridgePluginUiServer {
         this.onRequest('/search', this.findProcessors.bind(this));
         this.onRequest('/connect', this.doConnect.bind(this));
         this.onRequest('/associate', this.doAssociate.bind(this));
+        this.onRequest('/browse', this.doBrowse.bind(this));
 
         // this MUST be called when you are ready to accept requests
         this.ready();
@@ -38,6 +39,50 @@ class PluginUiServer extends HomebridgePluginUiServer {
             throw e;
         }
         this.pushEvent('connected', processorID);
+    }
+
+    async doBrowse({ secrets, processorID, ipAddress }) {
+        // Opens its own short-lived connection to the processor (separate from the
+        // running plugin's connection) just to list what's actually configured on it,
+        // so the settings UI can offer real names to pick from instead of a blind
+        // free-text field.
+        console.log('Got request to browse', processorID, 'at', ipAddress);
+        const client = new LeapClient(ipAddress, 8081 /*TODO magic number*/, secrets.ca, secrets.key, secrets.cert);
+        const processor = new Processor(processorID, client);
+
+        try {
+            await client.connect();
+
+            const zones = [];
+            const areas = await processor.getAreas();
+            for (const area of areas) {
+                if (!area.IsLeaf) {
+                    continue;
+                }
+                for (const zoneHref of area.AssociatedZones || []) {
+                    try {
+                        const zone = await processor.getZoneDefinition(zoneHref);
+                        zones.push({ name: zone.Name, area: area.Name, controlType: zone.ControlType });
+                    } catch (e) {
+                        console.log('failed to get zone', zoneHref.href, e.message);
+                    }
+                }
+            }
+
+            let virtualButtons = [];
+            try {
+                virtualButtons = (await processor.getVirtualButtons()).map((vb) => ({ name: vb.Name }));
+            } catch (e) {
+                console.log('failed to get virtual buttons', e.message);
+            }
+
+            return { zones, virtualButtons };
+        } catch (e) {
+            console.log('browse failed', processorID, ipAddress, e);
+            throw new RequestError('Failed to browse processor', { message: e.message });
+        } finally {
+            processor.close();
+        }
     }
 
     async doAssociate({ processorID, ipAddress }) {

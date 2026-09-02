@@ -39,6 +39,17 @@
     <div id="processors">
         <div class="card my-2" id="searching">Searching for processors...</div>
     </div>
+    <div id="resources" class="card-body my-3 w-75 mx-auto" style="display: none;">
+        <h4 class="card-title">Scenes &amp; Switches</h4>
+        <p class="text-muted small">
+            Pick which of your actual Lutron Virtual Buttons (scenes) and zones (switches/dimmers)
+            to expose here. Nothing is exposed unless checked. For zones, disable that zone's
+            native Apple HomeKit export in the Lutron app before checking it here, or it'll show
+            up twice.
+        </p>
+        <div id="virtualButtonsList"></div>
+        <div id="zonesList"></div>
+    </div>
     <div id="schemapop">
         <button type="button" class="btn btn-secondary" id="schemapopbtn">Use legacy view</button>
     </div>
@@ -61,6 +72,12 @@
                 clickSpeedDouble: "default",
                 clickSpeedLong: "default",
             };
+        }
+        if (pluginConfig[0].options.virtualButtons === undefined) {
+            pluginConfig[0].options.virtualButtons = [];
+        }
+        if (pluginConfig[0].options.zones === undefined) {
+            pluginConfig[0].options.zones = [];
         }
         return pluginConfig;
     }
@@ -149,6 +166,7 @@
                 b.toAssociated(() => {
                     deleteProcessorSecret(event.data, secretMap);
                 });
+                loadResources(b, secretMap.get(b.processorID));
             }
 
             console.log('listening for connected');
@@ -225,6 +243,114 @@
             })
             .then(() => console.log('connect request complete for', processor.processorID, processor.ipAddress));
         processor.toConnecting();
+    }
+
+    let allVirtualButtons = [];
+    let allZones = [];
+    const resourcesLoadedFor = new Set();
+
+    async function loadResources(processor, secrets) {
+        if (secrets === undefined || resourcesLoadedFor.has(processor.processorID)) {
+            return;
+        }
+        resourcesLoadedFor.add(processor.processorID);
+        try {
+            const result = await homebridge.request('/browse', {
+                secrets: secrets,
+                processorID: processor.processorID,
+                ipAddress: processor.ipAddress,
+            });
+            for (const vb of result.virtualButtons) {
+                if (!allVirtualButtons.some((x) => x.name === vb.name)) {
+                    allVirtualButtons.push(vb);
+                }
+            }
+            for (const z of result.zones) {
+                if (!allZones.some((x) => x.name === z.name && x.area === z.area)) {
+                    allZones.push(z);
+                }
+            }
+            await renderResources();
+        } catch (e) {
+            console.log('failed to browse processor', processor.processorID, e);
+            homebridge.toast.error('Could not load scenes/zones from ' + processor.processorID);
+        }
+    }
+
+    function escapeHtml(s) {
+        const div = document.createElement('div');
+        div.innerText = s;
+        return div.innerHTML;
+    }
+
+    function renderCheckRow(prefix, name, label, optionKey) {
+        const id = prefix + '-' + name.replace(/[^a-zA-Z0-9]/g, '_');
+        return `<div class="form-check text-left">
+            <input class="form-check-input" type="checkbox" id="${id}" data-name="${escapeHtml(name)}" data-option="${optionKey}"/>
+            <label class="form-check-label" for="${id}">${escapeHtml(label)}</label>
+        </div>`;
+    }
+
+    async function renderResources() {
+        document.getElementById('resources').style.display =
+            allVirtualButtons.length || allZones.length ? '' : 'none';
+
+        const vbContainer = document.getElementById('virtualButtonsList');
+        vbContainer.innerHTML =
+            allVirtualButtons.length === 0
+                ? ''
+                : '<h6 class="mt-3">Virtual Buttons (scenes)</h6>' +
+                  allVirtualButtons.map((vb) => renderCheckRow('vb', vb.name, vb.name, 'virtualButtons')).join('');
+
+        const zoneContainer = document.getElementById('zonesList');
+        if (allZones.length === 0) {
+            zoneContainer.innerHTML = '';
+        } else {
+            const byArea = new Map();
+            for (const z of allZones) {
+                if (!byArea.has(z.area)) {
+                    byArea.set(z.area, []);
+                }
+                byArea.get(z.area).push(z);
+            }
+            let html = '<h6 class="mt-3">Zones (switches/dimmers)</h6>';
+            for (const [area, zones] of byArea) {
+                html += `<div class="font-weight-bold small mt-2">${escapeHtml(area)}</div>`;
+                html += zones
+                    .map((z) =>
+                        renderCheckRow(
+                            'zone',
+                            z.name,
+                            `${z.name} (${z.controlType === 'Dimmed' ? 'dimmer' : 'switch'})`,
+                            'zones',
+                        ),
+                    )
+                    .join('');
+            }
+            zoneContainer.innerHTML = html;
+        }
+
+        await attachCheckHandlers();
+    }
+
+    async function attachCheckHandlers() {
+        const cfg = bootstrapConfig(await homebridge.getPluginConfig());
+        document.querySelectorAll('#resources input[type=checkbox]').forEach((el) => {
+            const optionKey = el.dataset.option;
+            const name = el.dataset.name;
+            el.checked = cfg[0].options[optionKey].includes(name);
+            el.onchange = async () => {
+                const pc = bootstrapConfig(await homebridge.getPluginConfig());
+                const list = pc[0].options[optionKey];
+                const idx = list.indexOf(name);
+                if (el.checked && idx === -1) {
+                    list.push(name);
+                } else if (!el.checked && idx !== -1) {
+                    list.splice(idx, 1);
+                }
+                await homebridge.updatePluginConfig(pc);
+            };
+        });
     }
 
     function deleteProcessorSecret(processorID, secretMap) {

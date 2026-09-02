@@ -122,6 +122,11 @@ Pairing/config happens through the plugin's custom Homebridge UI settings screen
 
 Multiple processors are supported — just repeat pairing for each; each gets its own `secrets` entry.
 
+Once a processor is paired/connected, the same settings screen fetches its actual Virtual
+Buttons and zones live and shows them as checkboxes (grouped by room for zones) — check the
+ones you want, no need to type exact names. This is what feeds `options.virtualButtons` and
+`options.zones`, described below.
+
 ## Scenes (Virtual Buttons) — fast, multi-device HomeKit "buttons"
 
 Apple Home Scenes are composed client-side: tapping one sends a separate HAP write to every
@@ -141,11 +146,11 @@ the Apple Home Scene.
 Setup:
 1. In the Lutron app (or Designer), create/name the Virtual Buttons you want (each tied to a
    Preset/scene) — this plugin doesn't create them, only exposes existing ones.
-2. In this plugin's config, add the Virtual Button's exact name to `options.virtualButtons`
-   (Homebridge UI: "Virtual Buttons (scenes) to expose"). Nothing is exposed by default —
-   this is opt-in, so internal/programming-only virtual buttons in your project don't clutter
-   the Home app.
-3. Restart Homebridge. Each configured name shows up as a HomeKit switch; tapping it fires the
+2. In this plugin's settings screen in Homebridge UI, once connected to your processor, check
+   the Virtual Buttons you want under "Scenes & Switches" — this writes their names into
+   `options.virtualButtons` for you. Nothing is exposed by default — this is opt-in, so
+   internal/programming-only virtual buttons in your project don't clutter the Home app.
+3. Restart Homebridge. Each checked one shows up as a HomeKit switch; tapping it fires the
    scene, and the switch flips back off ~1s later (it's momentary, not persistent state).
 4. These are ordinary HomeKit switches, so they also work as triggers inside Home app/Shortcuts
    automations — just don't put more than one in the same Apple Home *Scene*, or you're back to
@@ -166,8 +171,9 @@ zone's HomeKit export in the Lutron app first.
 
 Setup:
 1. In the Lutron app, find the zone (switch/dimmer) you want and turn off its HomeKit export.
-2. Add the zone's exact name to `options.zones` in this plugin's config (Homebridge UI: "Zones
-   to control directly"). Nothing is touched by default — opt-in, one zone at a time.
+2. In this plugin's settings screen, under "Scenes & Switches", check that zone (grouped by
+   room, same names as the Lutron app) — this writes its name into `options.zones` for you.
+   Nothing is touched by default — opt-in, one zone at a time.
 3. Restart Homebridge. It auto-detects dimmable zones (`Lightbulb` with a brightness slider) vs.
    plain on/off zones (`Switch`) from the zone's own definition — nothing to configure per-type.
 4. State changes made physically (at the switch/keypad) or from another app are reflected back
@@ -207,16 +213,27 @@ scripted or done on your behalf, run it yourself in a terminal.
    "Pairing with the processor" above) → discover your processor → press its physical pairing
    button → save.
 
-That's it — no `npm link`, no container shell, no tarballs. Future updates are the same UI's
-Update button, since it's now a real published package under a name only you own.
+> **The search box can lag for a while after a fresh publish or version bump.** npm's registry
+> (what actually gets installed) updates instantly, but Homebridge UI's *search* hits npm's
+> separate search index, which can take hours to catch up — confirmed directly: `npm view
+> @epthewizard/homebridge-lutron-radiora3` found it immediately after publishing, but it didn't
+> appear in npm's own search API for the exact same package name many hours later. If search
+> comes up empty, install by exact name instead — it doesn't depend on the search index:
+> ```bash
+> # in a shell inside the Homebridge container (Unraid: Docker tab → container icon → Console),
+> # from the Homebridge storage directory (check your container's path mappings if unsure):
+> npm install @epthewizard/homebridge-lutron-radiora3
+> ```
+> then restart Homebridge — it'll show up under Plugins → Installed even though search can't find it yet.
+
+Future updates are the same UI's Update button (once search catches up), since it's now a real
+published package under a name only you own.
 
 ### Unraid specifically
 
 The Homebridge container (whether the `oznu/homebridge` or `homebridge/homebridge` Community
 App) already runs Homebridge UI on the port you set up during the Unraid template install —
 open that in a browser and follow the 4 steps above exactly as you would on any other host.
-You never need Unraid's Docker "Console" button or `docker exec` for this — that's only a
-fallback for plugins that aren't published, which this no longer is.
 
 ## Known gotchas
 
