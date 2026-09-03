@@ -1,6 +1,9 @@
 # Ignore source code
 src
 
+# Never publish local cert/key material
+certs/
+
 # ------------- Defaults ------------- #
 
 # gitHub actions

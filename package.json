@@ -16,6 +16,11 @@
         "homebridge": ">=1.6.0"
     },
     "main": "dist/index.js",
+    "files": [
+        "dist",
+        "config.schema.json",
+        "homebridge-ui"
+    ],
     "publishConfig": {
         "access": "public"
     },
