@@ -8,6 +8,17 @@ slowing that down. User chose (via AskUserQuestion) to add direct switch+dimmer 
 plugin, bypassing the native bridge, on the theory that LEAP-direct control over the same
 persistent local connection keypad buttons use will be more responsive.
 
+**That latency theory was walked back in chat on 2026-09-02 and should not be repeated as fact.**
+It's unverified, and the topology argues the opposite: RA3's native bridge runs *on the
+processor itself* (phone → processor, one hop), while this plugin's path is phone → Homebridge
+(a separate host, e.g. the user's Unraid box) → LEAP → processor (two hops, one of them a
+different machine). If anything this plugin's path could be *slower* for a single zone. This
+feature's real value is two-way live sync through one connection and independence from the
+native bridge, not proven responsiveness — don't claim a speed win without an actual benchmark.
+The thing that *is* provably faster is [[ra3_virtual_button_scenes]] (1 HomeKit command instead
+of N sequential ones for multi-device changes) — that's the fix for "grouped lights are slow,"
+not this feature.
+
 ## What was added
 - `Processor` (`src/leap/Processor.ts`): `getZoneDefinition(href)` (`GET <href>` →
   `OneZoneDefinition.Zone`), `getZoneStatus(zone)` (`GET <zone.href>/status` →

@@ -50,6 +50,15 @@ code — surfaced live 2026-09-02 when the user tried it on their Unraid Homebri
 Plain `npm install` now works with no flags; the old `--ignore-scripts` workaround is no longer
 needed (and would have skipped the `prepare`/`tsc` build step too, which git installs need).
 
+## Keypad button accessories don't show as tiles in Apple Home — this is by design
+`SunnataKeypad.ts` exposes each button as a `StatelessProgrammableSwitch` service. Apple's Home
+app deliberately never renders that service type as a tile — it's automation-trigger-only (Home
+app → Automations → "An Accessory is Controlled"). Confirmed live 2026-09-02/03: a user seeing
+30+ "Device X not found in accessory cache" log lines (successful discovery of that many keypad
+devices) followed by nothing appearing in the Home app was not a bug — that's expected behavior
+for this accessory type. Only [[ra3_virtual_button_scenes]] (`Switch`) and [[ra3_zone_control]]
+(`Switch`/`Lightbulb`) produce tappable tiles.
+
 ## Local testing
 `npm run build` (tsc) and `npm run lint` (eslint) both pass clean after the above fixes.
 `npm link` done in this repo under the new scoped name; still need
