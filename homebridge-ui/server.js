@@ -63,6 +63,12 @@ class PluginUiServer extends HomebridgePluginUiServer {
 
             const zones = [];
             const areas = await processor.getAreas();
+            console.log(
+                'browse: got',
+                areas.length,
+                'areas:',
+                areas.map((a) => ({ name: a.Name, isLeaf: a.IsLeaf, zoneCount: (a.AssociatedZones || []).length })),
+            );
             for (const area of areas) {
                 if (!area.IsLeaf) {
                     continue;
@@ -76,10 +82,13 @@ class PluginUiServer extends HomebridgePluginUiServer {
                     }
                 }
             }
+            console.log('browse: resolved', zones.length, 'zones total');
 
             let virtualButtons = [];
             try {
-                virtualButtons = (await processor.getVirtualButtons()).map((vb) => ({ name: vb.Name }));
+                const raw = await processor.getVirtualButtons();
+                console.log('browse: got', raw.length, 'raw virtual buttons:', raw.map((vb) => vb.Name));
+                virtualButtons = raw.map((vb) => ({ name: vb.Name }));
             } catch (e) {
                 console.log('failed to get virtual buttons', e.message);
             }
