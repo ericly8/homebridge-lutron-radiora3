@@ -50,9 +50,6 @@
         <div id="virtualButtonsList"></div>
         <div id="zonesList"></div>
     </div>
-    <div id="schemapop">
-        <button type="button" class="btn btn-secondary" id="schemapopbtn">Use legacy view</button>
-    </div>
 </div>
 
 <script>
@@ -81,15 +78,6 @@
         }
         return pluginConfig;
     }
-
-    document.getElementById('schemapopbtn').addEventListener('click', () => {
-        homebridge.getPluginConfig().then((pluginConfig) => {
-            document.getElementById('processors').innerHTML = '';
-            document.getElementById('schemapop').innerHTML = '';
-            pluginConfig = bootstrapConfig(pluginConfig);
-            homebridge.updatePluginConfig(pluginConfig).then(() => homebridge.showSchemaForm());
-        });
-    });
 
     async function updateConfigFromMap(pluginConfig, secretsMap) {
         pluginConfig = bootstrapConfig(pluginConfig);
