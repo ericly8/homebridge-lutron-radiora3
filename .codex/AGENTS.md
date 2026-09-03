@@ -137,3 +137,30 @@ speed; don't repeat the claim without a real benchmark.
 `dist` was previously (wrongly) excluded from the npm package (a leftover from a generic
 project template) — every publish would have shipped zero compiled code. Fixed. If `.npmignore`
 is ever edited again, verify with `npm pack --dry-run` that `dist/*.js` is still included.
+**`package.json` now has an explicit `"files"` allowlist** (`dist`, `config.schema.json`,
+`homebridge-ui`) as the real safeguard — added 2026-09-03 after discovering npm was reporting
+"no .npmignore found" (despite one existing and being tracked) and shipping `.codex/AGENTS.md`,
+`.serena/memories/*.md`, and (very nearly) a local `certs/` directory with real Lutron client
+key material into the public package. `.npmignore`'s exclusions can't be trusted alone; the
+`files` allowlist is what actually determines what gets published now — keep it in sync if new
+top-level published paths are ever added, and never rely on ignore-file matching for anything
+sensitive.
+
+## Unresolved as of 2026-09-04: Scenes & Switches picker still empty after the leak/timeout fix
+The connection-leak + missing-timeout bug (above) is fixed and confirmed live in `0.1.2`, but a
+user with real hardware still sees "Connected!" with an empty Scenes & Switches section — no
+error this time, just nothing found. Diagnostic logging was added to `doBrowse`
+(`homebridge-ui/server.js`, commit `b312b25`) to log area/zone/virtual-button counts server-side,
+but **that commit was not pushed to origin or published to npm before the session ended** — get
+it shipped and get the log output before doing anything else on this bug. Full details, including
+a real discovered wrinkle (the user's actual target button, "1st Floor Off", lives under a
+Lutron-app "Smartphone" virtual-remote device, not obviously the same thing as a Designer Virtual
+Button) are in [[ra3_picker_ui_and_npm_search_lag]] — read it before touching this again.
+
+## Lesson: don't infer "what code is actually running" from version numbers alone
+Confusion cost real time on 2026-09-03/04: `package.json`'s version field is not bumped by a git
+install at all, and a user's own recollection of "I installed the fix" doesn't confirm which
+commit they actually got. The only reliable checks: for an npm install, the version badge shown
+on the plugin's card in Homebridge UI's Plugins list (not chat history, not `package.json` in
+this dev checkout); for a git install, there's no reliable version signal at all — confirm via
+what's actually on `origin/main` (`git log origin/main`) versus what's pushed locally.
