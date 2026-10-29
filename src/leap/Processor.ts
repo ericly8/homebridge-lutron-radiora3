@@ -216,6 +216,13 @@ export class Processor extends (EventEmitter as new () => TypedEmitter<Processor
         return [];
     }
 
+    public async pressButton(button: ButtonDefinition): Promise<void> {
+        logDebug('pressing button:', button.href);
+        await this.client.request('CreateRequest', button.href + '/commandprocessor', {
+            Command: { CommandType: 'PressAndRelease' },
+        });
+    }
+
     public async pressVirtualButton(virtualButton: VirtualButtonDefinition): Promise<void> {
         logDebug('pressing virtual button:', virtualButton.href);
         await this.client.request('CreateRequest', virtualButton.href + '/commandprocessor', {
