@@ -458,7 +458,7 @@ export class LutronRadioRA3Platform
         accessory.displayName = fullyQualifiedName;
 
         switch (device.DeviceType) {
-            // supported Sunnata keypads
+            // supported keypads
             case 'SeeTouchKeypad':
             case 'SeeTouchHybridKeypad':
             case 'SunnataKeypad':
