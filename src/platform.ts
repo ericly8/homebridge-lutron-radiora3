@@ -20,7 +20,7 @@ import { API, APIEvent, DynamicPlatformPlugin, Logging, PlatformAccessory, Platf
 import TypedEmitter from 'typed-emitter';
 
 import { PLUGIN_NAME, PLATFORM_NAME } from './settings';
-import { SunnataKeypad } from './SunnataKeypad';
+import { KeypadAccessory } from './KeypadAccessory';
 import { PicoRemote } from './PicoRemote';
 import { VirtualButtonScene } from './VirtualButtonScene';
 import { ZoneAccessory } from './ZoneAccessory';
@@ -459,10 +459,12 @@ export class LutronRadioRA3Platform
 
         switch (device.DeviceType) {
             // supported Sunnata keypads
+            case 'SeeTouchKeypad':
+            case 'SeeTouchHybridKeypad':
             case 'SunnataKeypad':
             case 'SunnataHybridKeypad': {
                 this.log.info(`Found a ${device.DeviceType}: ${fullyQualifiedName}`);
-                const keypad = new SunnataKeypad(this, accessory, processor, this.options);
+                const keypad = new KeypadAccessory(this, accessory, processor, this.options);
                 return keypad.initialize();
             }
 
